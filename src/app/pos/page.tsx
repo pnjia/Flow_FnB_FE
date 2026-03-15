@@ -12,6 +12,7 @@ import {
   ChefHat,
   Send,
   ArrowRight,
+  Sparkles,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -109,6 +110,17 @@ const STATUS_CONFIG: Record<
     icon: Users,
     blink: false,
   },
+  cleaning: {
+    label: "Cleaning",
+    dotColor: "bg-amber-400",
+    badgeClass:
+      "border-amber-400/30 bg-amber-400/10 text-amber-700 dark:text-amber-400",
+    cardBorderClass:
+      "border-amber-400/50 hover:border-amber-400/70 shadow-amber-400/10 shadow-md",
+    cardBgClass: "bg-amber-50/50 dark:bg-amber-950/20",
+    icon: Sparkles,
+    blink: true,
+  },
 };
 
 // ============================================================
@@ -166,7 +178,9 @@ function TableCard({
                       ? "bg-red-100 dark:bg-red-900/30"
                       : table.status === "ready_deliver"
                         ? "bg-blue-100 dark:bg-blue-900/30"
-                        : "bg-gray-100 dark:bg-gray-800/30",
+                        : table.status === "cleaning"
+                          ? "bg-amber-100 dark:bg-amber-900/30"
+                          : "bg-gray-100 dark:bg-gray-800/30",
               )}
             >
               <StatusIcon
@@ -180,7 +194,9 @@ function TableCard({
                         ? "text-red-600 dark:text-red-400"
                         : table.status === "ready_deliver"
                           ? "text-blue-600 dark:text-blue-400"
-                          : "text-gray-500 dark:text-gray-400",
+                          : table.status === "cleaning"
+                            ? "text-amber-600 dark:text-amber-400"
+                            : "text-gray-500 dark:text-gray-400",
                 )}
               />
             </div>
@@ -343,6 +359,7 @@ export default function POSPage() {
   const tables = useAppStore((s) => s.tables);
   const updateTableStatus = useAppStore((s) => s.updateTableStatus);
   const addKDSOrder = useAppStore((s) => s.addKDSOrder);
+  const markTableEmpty = useAppStore((s) => s.markTableEmpty);
 
   // Validation sheet state
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
@@ -363,6 +380,7 @@ export default function POSPage() {
     { status: "cooking", label: "Cooking" },
     { status: "ready_deliver", label: "Ready" },
     { status: "eating", label: "Eating" },
+    { status: "cleaning", label: "Cleaning" },
   ];
 
   // ---- BUG FIX 3: Empty tables route to /menu/[tableId] ----
@@ -377,6 +395,9 @@ export default function POSPage() {
       // Open waiter validation sheet
       setSelectedTable(table);
       setSheetOpen(true);
+    } else if (table.status === "cleaning") {
+      // Waiter marks table as clean → empty
+      markTableEmpty(table.id);
     } else {
       // For other statuses, navigate to checkout
       const tableNumber = table.id.replace("table-", "");

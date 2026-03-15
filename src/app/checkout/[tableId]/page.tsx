@@ -32,7 +32,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useAppStore } from "@/store";
-import { OrderItem } from "@/types";
+import { OrderItem, Transaction } from "@/types";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
@@ -128,7 +128,7 @@ function PaymentModal({
   open: boolean;
   onClose: () => void;
   total: number;
-  onComplete: () => void;
+  onComplete: (paymentMethod: "cash" | "qris", cashReceived?: number) => void;
 }) {
   const [cashReceived, setCashReceived] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<string>("cash");
@@ -140,10 +140,12 @@ function PaymentModal({
 
   const handleComplete = () => {
     setCompleted(true);
+    const method = paymentMethod as "cash" | "qris";
+    const cash = method === "cash" ? cashAmount : undefined;
     setTimeout(() => {
       setCompleted(false);
       setCashReceived("");
-      onComplete();
+      onComplete(method, cash);
     }, 1500);
   };
 
@@ -343,6 +345,7 @@ export default function CheckoutPage() {
 
   const table = useAppStore((s) => s.tables.find((t) => t.id === tableId));
   const payItems = useAppStore((s) => s.payItems);
+  const addTransaction = useAppStore((s) => s.addTransaction);
 
   const items = table?.currentOrder ?? [];
 
@@ -396,13 +399,33 @@ export default function CheckoutPage() {
   const fullTax = Math.round(fullSubtotal * 0.1);
   const fullTotal = fullSubtotal + fullTax;
 
-  const handlePaymentComplete = () => {
+  const handlePaymentComplete = (
+    paymentMethod: "cash" | "qris",
+    cashReceived?: number,
+  ) => {
     setPaymentOpen(false);
 
     // Get the IDs of items being paid
     const paidIds = activeItems.map((i) => i.id);
 
-    // Update global state
+    // Record transaction in history
+    const tx: Transaction = {
+      id: `tx-${Date.now()}`,
+      tableId,
+      tableName: table?.name ?? `Meja`,
+      items: activeItems,
+      subtotal,
+      tax,
+      total,
+      paymentMethod,
+      paidAt: new Date().toISOString(),
+      ...(paymentMethod === "cash" && cashReceived
+        ? { cashReceived, change: cashReceived - total }
+        : {}),
+    };
+    addTransaction(tx);
+
+    // Update global state (payItems now sets table to 'cleaning' when cleared)
     payItems(tableId, paidIds);
 
     // Redirect to POS
