@@ -6,8 +6,14 @@ import {
   OrderItem,
   KDSStatus,
   TableStatus,
+  Transaction,
 } from "@/types";
-import { dummyTables, dummyProducts, dummyKDSQueue } from "./dummy-data";
+import {
+  dummyTables,
+  dummyProducts,
+  dummyKDSQueue,
+  dummyTransactionHistory,
+} from "./dummy-data";
 
 // ============================================================
 // Store Interface
@@ -17,6 +23,7 @@ interface AppStore {
   tables: Table[];
   products: Product[];
   kdsQueue: KDSOrder[];
+  transactionHistory: Transaction[];
 
   // ---- Table Actions ----
   updateTableStatus: (tableId: string, status: TableStatus) => void;
@@ -24,6 +31,8 @@ interface AppStore {
   addItemToTable: (tableId: string, item: OrderItem) => void;
   removeItemFromTable: (tableId: string, itemId: string) => void;
   clearTableOrder: (tableId: string) => void;
+  markTableCleaning: (tableId: string) => void;
+  markTableEmpty: (tableId: string) => void;
 
   // ---- KDS Actions ----
   addKDSOrder: (order: KDSOrder) => void;
@@ -31,8 +40,16 @@ interface AppStore {
   removeKDSOrder: (orderId: string) => void;
   // Composite: mark KDS done + table ready_deliver
   markKDSDone: (orderId: string) => void;
-  // Composite: pay items + auto-empty table
+  // Composite: pay items + set table to "cleaning" if order cleared
   payItems: (tableId: string, paidItemIds: string[]) => void;
+
+  // ---- Transaction Actions ----
+  addTransaction: (tx: Transaction) => void;
+
+  // ---- Product CRUD Actions ----
+  addProduct: (product: Product) => void;
+  updateProduct: (id: string, data: Partial<Product>) => void;
+  deleteProduct: (id: string) => void;
 }
 
 // ============================================================
@@ -43,6 +60,7 @@ export const useAppStore = create<AppStore>((set) => ({
   tables: dummyTables,
   products: dummyProducts,
   kdsQueue: dummyKDSQueue,
+  transactionHistory: dummyTransactionHistory,
 
   // ---- Table Actions ----
   updateTableStatus: (tableId, status) =>
@@ -89,6 +107,22 @@ export const useAppStore = create<AppStore>((set) => ({
       ),
     })),
 
+  markTableCleaning: (tableId) =>
+    set((state) => ({
+      tables: state.tables.map((t) =>
+        t.id === tableId
+          ? { ...t, currentOrder: [], status: "cleaning" as TableStatus }
+          : t,
+      ),
+    })),
+
+  markTableEmpty: (tableId) =>
+    set((state) => ({
+      tables: state.tables.map((t) =>
+        t.id === tableId ? { ...t, status: "empty" as TableStatus } : t,
+      ),
+    })),
+
   // ---- KDS Actions ----
   addKDSOrder: (order) =>
     set((state) => ({
@@ -125,7 +159,7 @@ export const useAppStore = create<AppStore>((set) => ({
       };
     }),
 
-  // Composite: pay items + auto-empty table if order is cleared
+  // Composite: pay items + set table to "cleaning" if order is cleared
   payItems: (tableId, paidItemIds) =>
     set((state) => {
       return {
@@ -137,9 +171,33 @@ export const useAppStore = create<AppStore>((set) => ({
           return {
             ...t,
             currentOrder: remaining,
-            status: remaining.length === 0 ? "empty" : t.status,
+            status: remaining.length === 0 ? "cleaning" : t.status,
           } as typeof t;
         }),
       };
     }),
+
+  // ---- Transaction Actions ----
+  addTransaction: (tx) =>
+    set((state) => ({
+      transactionHistory: [tx, ...state.transactionHistory],
+    })),
+
+  // ---- Product CRUD Actions ----
+  addProduct: (product) =>
+    set((state) => ({
+      products: [...state.products, product],
+    })),
+
+  updateProduct: (id, data) =>
+    set((state) => ({
+      products: state.products.map((p) =>
+        p.id === id ? { ...p, ...data } : p,
+      ),
+    })),
+
+  deleteProduct: (id) =>
+    set((state) => ({
+      products: state.products.filter((p) => p.id !== id),
+    })),
 }));

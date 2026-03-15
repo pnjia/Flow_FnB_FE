@@ -16,6 +16,8 @@ export interface Product {
   price: number;
   category: string;
   image?: string;
+  stock: number;
+  recipe: string[];
   addons: {
     mandatory: Addon[];
     optional: Addon[];
@@ -39,7 +41,8 @@ export type TableStatus =
   | "new_order"
   | "cooking"
   | "ready_deliver"
-  | "eating";
+  | "eating"
+  | "cleaning";
 
 export interface Table {
   id: string;
@@ -58,4 +61,21 @@ export interface KDSOrder {
   items: OrderItem[];
   status: KDSStatus;
   createdAt: string;
+}
+
+// ---------- Transaction ----------
+export type PaymentMethod = "cash" | "qris";
+
+export interface Transaction {
+  id: string;
+  tableId: string;
+  tableName: string;
+  items: OrderItem[];
+  subtotal: number;
+  tax: number;
+  total: number;
+  paymentMethod: PaymentMethod;
+  paidAt: string;
+  cashReceived?: number;
+  change?: number;
 }
