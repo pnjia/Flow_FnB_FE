@@ -51,7 +51,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAppStore } from "@/store";
-import { Product } from "@/types";
+import { Product, RawMaterial, RecipeIngredient } from "@/types";
 import { cn } from "@/lib/utils";
 
 // ============================================================
@@ -98,17 +98,20 @@ function ProductFormDialog({
   open,
   onClose,
   product,
+  rawMaterials,
   onSave,
 }: {
   open: boolean;
   onClose: () => void;
   product: Product | null; // null = new product
+  rawMaterials: RawMaterial[];
   onSave: (data: {
     name: string;
     category: string;
     price: number;
     stock: number;
     recipe: string[];
+    recipeIngredients: RecipeIngredient[];
   }) => void;
 }) {
   const [name, setName] = useState("");
@@ -116,6 +119,9 @@ function ProductFormDialog({
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
   const [recipeText, setRecipeText] = useState("");
+  const [recipeIngredients, setRecipeIngredients] = useState<
+    RecipeIngredient[]
+  >([]);
 
   // Populate form when editing
   useEffect(() => {
@@ -125,12 +131,14 @@ function ProductFormDialog({
       setPrice(String(product.price));
       setStock(String(product.stock));
       setRecipeText(product.recipe.join("\n"));
+      setRecipeIngredients(product.recipeIngredients || []);
     } else {
       setName("");
       setCategory("Makanan");
       setPrice("");
       setStock("");
       setRecipeText("");
+      setRecipeIngredients([]);
     }
   }, [product, open]);
 
@@ -148,6 +156,7 @@ function ProductFormDialog({
         .split("\n")
         .map((s) => s.trim())
         .filter(Boolean),
+      recipeIngredients,
     });
     onClose();
   };
@@ -192,7 +201,12 @@ function ProductFormDialog({
             <Label className="text-sm font-semibold mb-1.5 block">
               Kategori
             </Label>
-            <Select value={category} onValueChange={setCategory}>
+            <Select
+              value={category}
+              onValueChange={(val) => {
+                if (val) setCategory(val);
+              }}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Pilih kategori" />
               </SelectTrigger>
@@ -235,14 +249,105 @@ function ProductFormDialog({
           {/* Recipe */}
           <div>
             <Label className="text-sm font-semibold mb-1.5 block">
-              Resep (satu langkah per baris)
+              Instruksi Resep (opsional)
             </Label>
             <Textarea
               value={recipeText}
               onChange={(e) => setRecipeText(e.target.value)}
-              placeholder="Langkah 1&#10;Langkah 2&#10;Langkah 3"
-              rows={4}
+              placeholder="Satu langkah per baris..."
+              rows={3}
             />
+          </div>
+
+          <Separator />
+
+          {/* Recipe Ingredients Linking */}
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <Label className="text-sm font-semibold block">
+                Bahan Baku (Resep)
+              </Label>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs px-2 gap-1"
+                onClick={() =>
+                  setRecipeIngredients([
+                    ...recipeIngredients,
+                    { materialId: "", qtyNeeded: 0 },
+                  ])
+                }
+              >
+                <Plus className="h-3 w-3" /> Tambah
+              </Button>
+            </div>
+
+            <div className="space-y-2">
+              {recipeIngredients.length === 0 ? (
+                <p className="text-xs text-muted-foreground italic text-center py-2 border rounded border-dashed">
+                  Belum ada bahan baku tertaut.
+                </p>
+              ) : (
+                recipeIngredients.map((ing, idx) => {
+                  return (
+                    <div key={idx} className="flex gap-2 items-center">
+                      <Select
+                        value={ing.materialId}
+                        onValueChange={(val: string | null) => {
+                          if (!val) return;
+                          const updated = [...recipeIngredients];
+                          updated[idx].materialId = val;
+                          setRecipeIngredients(updated);
+                        }}
+                      >
+                        <SelectTrigger className="flex-1 h-9 text-sm">
+                          <SelectValue placeholder="Pilih bahan" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {rawMaterials.map((rm) => (
+                            <SelectItem key={rm.id} value={rm.id}>
+                              {rm.name} ({rm.stock} {rm.unit})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      <Input
+                        type="number"
+                        placeholder="Qty"
+                        className="w-20 h-9 shrink-0 text-sm"
+                        min={0}
+                        value={ing.qtyNeeded || ""}
+                        onChange={(e) => {
+                          const updated = [...recipeIngredients];
+                          updated[idx].qtyNeeded =
+                            parseFloat(e.target.value) || 0;
+                          setRecipeIngredients(updated);
+                        }}
+                      />
+
+                      <div className="w-12 text-xs text-muted-foreground shrink-0 overflow-hidden text-ellipsis whitespace-nowrap">
+                        {rawMaterials.find((m) => m.id === ing.materialId)
+                          ?.unit || "-"}
+                      </div>
+
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-red-600 shrink-0"
+                        onClick={() => {
+                          const updated = [...recipeIngredients];
+                          updated.splice(idx, 1);
+                          setRecipeIngredients(updated);
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
         </div>
 
@@ -283,6 +388,7 @@ export default function AdminProductsPage() {
   }, []);
 
   const products = useAppStore((s) => s.products);
+  const rawMaterials = useAppStore((s) => s.rawMaterials);
   const addProduct = useAppStore((s) => s.addProduct);
   const updateProduct = useAppStore((s) => s.updateProduct);
   const deleteProduct = useAppStore((s) => s.deleteProduct);
@@ -317,6 +423,7 @@ export default function AdminProductsPage() {
     price: number;
     stock: number;
     recipe: string[];
+    recipeIngredients: RecipeIngredient[];
   }) => {
     if (editingProduct) {
       // Update existing product
@@ -490,6 +597,7 @@ export default function AdminProductsPage() {
           setEditingProduct(null);
         }}
         product={editingProduct}
+        rawMaterials={rawMaterials}
         onSave={handleSave}
       />
 
