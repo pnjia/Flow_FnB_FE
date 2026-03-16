@@ -679,7 +679,6 @@ export function MenuContent() {
           setTableOrder(tableId, mergedOrder);
           setCart([]);
         }}
-        statusOnConfirm="new_order"
         onSuccess={() => {
           setCart([]);
           router.push("/pos");
