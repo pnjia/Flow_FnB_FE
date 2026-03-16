@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import {
   Receipt,
   Search,
@@ -15,6 +15,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Dialog,
   DialogContent,
@@ -23,7 +24,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import {
-  Table,
+  Table as UITable,
   TableBody,
   TableCell,
   TableHead,
@@ -31,24 +32,21 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAppStore } from "@/store";
-import { Transaction, OrderItem } from "@/types";
+import { Transaction, OrderItemUnit } from "@/types";
 import { cn } from "@/lib/utils";
 
 // ============================================================
-// Helper: format IDR
+// Helper functions
 // ============================================================
 function formatRp(amount: number) {
   return `Rp ${amount.toLocaleString("id-ID")}`;
 }
 
-function getItemTotal(item: OrderItem) {
+function getItemTotal(item: OrderItemUnit) {
   const addonTotal = item.selectedAddons.reduce((a, ad) => a + ad.price, 0);
-  return (item.price + addonTotal) * item.quantity;
+  return item.price + addonTotal;
 }
 
-// ============================================================
-// Format relative time
-// ============================================================
 function formatRelativeTime(isoString: string) {
   const diff = Date.now() - new Date(isoString).getTime();
   const minutes = Math.floor(diff / 60000);
@@ -102,14 +100,9 @@ function TransactionDetailDialog({
           {/* Items */}
           <div className="space-y-2">
             {transaction.items.map((item) => (
-              <div key={item.id} className="flex justify-between text-sm">
+              <div key={item.unitId} className="flex justify-between text-sm">
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium">
-                    <span className="text-orange-600 dark:text-orange-400 font-bold">
-                      {item.quantity}x
-                    </span>{" "}
-                    {item.productName}
-                  </p>
+                  <p className="font-medium">{item.productName}</p>
                   {item.selectedAddons.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-0.5">
                       {item.selectedAddons.map((addon) => (
@@ -161,7 +154,10 @@ function TransactionDetailDialog({
             <CardContent className="p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Metode</span>
-                <Badge variant="outline" className="gap-1.5 text-xs">
+                <Badge
+                  variant="outline"
+                  className="gap-1.5 text-xs bg-background"
+                >
                   {transaction.paymentMethod === "cash" ? (
                     <>
                       <Banknote className="h-3 w-3" />
@@ -203,14 +199,9 @@ function TransactionDetailDialog({
 }
 
 // ============================================================
-// Transactions Page
+// Transactions View (Cashier Tab)
 // ============================================================
-export default function TransactionsPage() {
-  const [isMounted, setIsMounted] = useState(false);
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
+export function TransactionsView() {
   const transactionHistory = useAppStore((s) => s.transactionHistory);
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "today">("all");
@@ -254,24 +245,10 @@ export default function TransactionsPage() {
     setDetailOpen(true);
   };
 
-  // Hydration guard
-  if (!isMounted) {
-    return (
-      <div className="flex flex-col h-[calc(100vh-4rem)] bg-background max-w-7xl mx-auto items-center justify-center">
-        <div className="animate-pulse flex flex-col items-center gap-4">
-          <div className="h-12 w-12 rounded-lg bg-sky-500/20" />
-          <h1 className="text-xl font-bold tracking-tight text-muted-foreground/50">
-            Memuat Riwayat Transaksi...
-          </h1>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="px-4 md:px-6 py-8 max-w-7xl mx-auto">
+    <div className="p-4 md:p-6 w-full max-w-7xl mx-auto h-full flex flex-col">
       {/* ---- Header ---- */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 shrink-0">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-sky-500 to-blue-500 shadow-md shadow-sky-500/25">
             <Receipt className="h-5 w-5 text-white" />
@@ -306,7 +283,7 @@ export default function TransactionsPage() {
       </div>
 
       {/* ---- Filter Bar ---- */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
+      <div className="flex flex-col sm:flex-row gap-3 mb-6 shrink-0">
         {/* Search */}
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -349,21 +326,21 @@ export default function TransactionsPage() {
       </div>
 
       {/* ---- Transaction Table ---- */}
-      {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-          <ShoppingBag className="h-12 w-12 mb-3 opacity-30" />
-          <p className="text-sm font-medium">Tidak ada transaksi ditemukan</p>
-          <p className="text-xs mt-1">
-            {filter === "today"
-              ? "Belum ada transaksi hari ini."
-              : "Riwayat transaksi masih kosong."}
-          </p>
-        </div>
-      ) : (
-        <Card>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
+      <div className="flex-1 overflow-hidden min-h-0">
+        {filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+            <ShoppingBag className="h-12 w-12 mb-3 opacity-30" />
+            <p className="text-sm font-medium">Tidak ada transaksi ditemukan</p>
+            <p className="text-xs mt-1">
+              {filter === "today"
+                ? "Belum ada transaksi hari ini."
+                : "Riwayat transaksi masih kosong."}
+            </p>
+          </div>
+        ) : (
+          <ScrollArea className="h-full border rounded-xl bg-card shadow-sm">
+            <UITable>
+              <TableHeader className="sticky top-0 bg-secondary/80 backdrop-blur z-10">
                 <TableRow>
                   <TableHead>ID</TableHead>
                   <TableHead>Meja</TableHead>
@@ -380,28 +357,31 @@ export default function TransactionsPage() {
                     className="cursor-pointer hover:bg-muted/50 transition-colors"
                     onClick={() => handleRowClick(tx)}
                   >
-                    <TableCell className="font-mono text-xs text-muted-foreground">
+                    <TableCell className="font-mono text-xs text-muted-foreground whitespace-nowrap">
                       #{tx.id.slice(-6).toUpperCase()}
                     </TableCell>
-                    <TableCell className="font-medium text-sm">
+                    <TableCell className="font-medium text-sm whitespace-nowrap">
                       {tx.tableName}
                     </TableCell>
                     <TableCell className="text-center">
-                      <Badge variant="outline" className="text-xs">
-                        {tx.items.reduce((sum, i) => sum + i.quantity, 0)} item
+                      <Badge
+                        variant="outline"
+                        className="text-xs whitespace-nowrap"
+                      >
+                        {tx.items.length} item
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right font-semibold text-sm">
+                    <TableCell className="text-right font-semibold text-sm whitespace-nowrap">
                       {formatRp(tx.total)}
                     </TableCell>
                     <TableCell className="text-center">
                       <Badge
                         variant="outline"
                         className={cn(
-                          "gap-1 text-[11px]",
+                          "gap-1 text-[11px] whitespace-nowrap",
                           tx.paymentMethod === "cash"
-                            ? "border-emerald-500/30 text-emerald-700 dark:text-emerald-400"
-                            : "border-violet-500/30 text-violet-700 dark:text-violet-400",
+                            ? "border-emerald-500/30 text-emerald-700 dark:text-emerald-400 bg-emerald-500/5"
+                            : "border-violet-500/30 text-violet-700 dark:text-violet-400 bg-violet-500/5",
                         )}
                       >
                         {tx.paymentMethod === "cash" ? (
@@ -412,16 +392,16 @@ export default function TransactionsPage() {
                         {tx.paymentMethod === "cash" ? "Tunai" : "QRIS"}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
+                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                       {formatRelativeTime(tx.paidAt)}
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
-            </Table>
-          </div>
-        </Card>
-      )}
+            </UITable>
+          </ScrollArea>
+        )}
+      </div>
 
       {/* ---- Detail Dialog ---- */}
       <TransactionDetailDialog

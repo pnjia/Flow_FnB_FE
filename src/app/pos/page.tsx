@@ -399,10 +399,10 @@ export default function POSPage() {
       // Waiter marks table as clean → empty
       markTableEmpty(table.id);
     } else {
-      // For other statuses, navigate to checkout
+      // For other statuses, navigate to menu to see table status/payment options
       const tableNumber = table.id.replace("table-", "");
       const tableNum = parseInt(tableNumber);
-      router.push(`/checkout/${tableNum}`);
+      router.push(`/menu/${tableNum}`);
     }
   };
 

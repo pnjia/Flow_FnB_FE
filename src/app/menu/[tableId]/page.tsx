@@ -10,6 +10,12 @@ import {
   UtensilsCrossed,
   Search,
   Check,
+  CreditCard,
+  QrCode,
+  Wallet,
+  Receipt,
+  User,
+  ArrowRight,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -26,8 +32,10 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { PaymentDialog } from "@/components/payment-dialog";
 import { useAppStore } from "@/store";
-import { Product, Addon, OrderItem } from "@/types";
+import { Product, Addon, OrderItem, OrderItemUnit } from "@/types";
 import { cn } from "@/lib/utils";
 
 // ============================================================
@@ -375,6 +383,13 @@ export default function MenuPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showCart, setShowCart] = useState(false);
 
+  // Payment dialog state
+  const [showPayment, setShowPayment] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "qris">("cash");
+  const computeTotals = useAppStore((s) => s.computeSelectedTotals);
+  const addTransaction = useAppStore((s) => s.addTransaction);
+  const payItems = useAppStore((s) => s.payItems);
+
   // Categories
   const categories = useMemo(() => {
     const cats = [...new Set(products.map((p) => p.category))];
@@ -417,19 +432,15 @@ export default function MenuPage() {
   const handlePesanSekarang = () => {
     if (cart.length === 0 || !table) return;
 
-    // 1. Merge existing order + new cart items
-    const mergedOrder = [...table.currentOrder, ...cart];
+    // Trigger payment dialog first
+    setShowCart(false);
+    setShowPayment(true);
+  };
 
-    // 2. Update table status to "new_order" and set the order
-    //    NOTE: Do NOT push to KDS here — waiter must validate first on /pos
-    updateTableStatus(tableId, "new_order");
-    setTableOrder(tableId, mergedOrder);
-
-    // 3. Clear local cart
-    setCart([]);
-
-    // 4. Navigate to POS to show the updated table
-    router.push("/pos");
+  // Payment Functions
+  const handleOpenPayment = () => {
+    if (!table || table.currentOrder.length === 0) return;
+    setShowPayment(true);
   };
 
   // Hydration guard
@@ -587,43 +598,93 @@ export default function MenuPage() {
       </Dialog>
 
       {/* ============================================================ */}
-      {/* Sticky Bottom Bar */}
+      {/* Sticky Cart Bar (New Items) */}
       {/* ============================================================ */}
       {cartItemCount > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur-sm shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
+        <div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-orange-500 text-white shadow-[0_-4px_20px_rgba(249,115,22,0.3)]">
           <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
-            {/* Cart summary */}
             <button
               onClick={() => setShowCart(true)}
-              className="flex-1 flex items-center gap-3 text-left"
+              className="flex-1 flex items-center gap-3 text-left group"
             >
-              <div className="relative">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-500 shadow-md shadow-orange-500/25">
-                  <ShoppingCart className="h-5 w-5 text-white" />
-                </div>
-                <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
-                  {cartItemCount}
-                </span>
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20 transition-transform group-hover:scale-105">
+                <ShoppingCart className="h-5 w-5 text-white" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">
-                  {cartItemCount} item
+                <p className="text-xs font-medium opacity-90">
+                  {cartItemCount} Item di Keranjang
                 </p>
                 <p className="text-base font-bold">{formatRp(cartTotal)}</p>
               </div>
             </button>
 
-            {/* Pesan Sekarang button */}
             <Button
-              className="bg-orange-500 hover:bg-orange-600 text-white px-6 h-11 gap-2 text-sm font-semibold shadow-md shadow-orange-500/25"
-              onClick={handlePesanSekarang}
+              onClick={() => setShowCart(true)}
+              className="bg-white text-orange-600 hover:bg-white/90 px-6 h-11 gap-2 text-sm font-bold shadow-sm active:scale-95 transition-all"
             >
-              <UtensilsCrossed className="h-4 w-4" />
-              Pesan Sekarang
+              Lihat Keranjang
+              <ArrowRight className="h-4 w-4" />
             </Button>
           </div>
         </div>
       )}
+
+      {/* Table Status / Payment Bar (when order exists but cart empty) */}
+      {/* ============================================================ */}
+      {cartItemCount === 0 &&
+        table &&
+        table.currentOrder.some((i) => !i.isPaid) && (
+          <div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur-sm shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
+            <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
+              <button
+                onClick={handleOpenPayment}
+                className="flex-1 flex items-center gap-3 text-left group"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500 shadow-md shadow-emerald-500/25 transition-transform group-hover:scale-105">
+                  <Receipt className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium">
+                    Tagihan Meja
+                  </p>
+                  <p className="text-base font-bold text-emerald-600 dark:text-emerald-400">
+                    {table.currentOrder.length} Porsi
+                  </p>
+                </div>
+              </button>
+
+              <Button
+                onClick={handleOpenPayment}
+                className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 h-11 gap-2 text-sm font-semibold shadow-md shadow-emerald-500/25 active:scale-95 transition-all"
+              >
+                Bayar Tagihan
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+      {/* ============================================================ */}
+      {/* Payment Dialog */}
+      {/* ============================================================ */}
+      <PaymentDialog
+        open={showPayment}
+        onOpenChange={setShowPayment}
+        table={table || null}
+        pendingItems={cart}
+        onConfirmOrder={(items) => {
+          if (!table) return;
+          const mergedOrder = [...table.currentOrder, ...items];
+          updateTableStatus(tableId, "new_order");
+          setTableOrder(tableId, mergedOrder);
+          setCart([]);
+        }}
+        statusOnConfirm="new_order"
+        onSuccess={() => {
+          setCart([]);
+          router.push("/pos");
+        }}
+      />
     </div>
   );
 }
