@@ -481,7 +481,15 @@ export function PosView() {
 
         {/* Action Buttons */}
         <div className="p-4 border-t bg-card space-y-3 shrink-0">
-          {selectedTable?.status === "cleaning" ? (
+          {selectedTable?.status === "eating" ? (
+            <Button
+              className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold flex gap-2"
+              onClick={() => updateTableStatus(selectedTable.id, "cleaning")}
+            >
+              <Users className="w-4 h-4" />
+              Pelanggan Sudah Keluar
+            </Button>
+          ) : selectedTable?.status === "cleaning" ? (
             <Button
               className="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold flex gap-2"
               onClick={handleCleanTable}
