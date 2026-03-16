@@ -13,6 +13,7 @@ import {
   Send,
   ArrowRight,
   Sparkles,
+  Check,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,6 +27,7 @@ import {
   SheetDescription,
   SheetFooter,
 } from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAppStore } from "@/store";
 import { Table, TableStatus, OrderItem } from "@/types";
 import { cn } from "@/lib/utils";
@@ -346,6 +348,196 @@ function ValidationSheet({
 }
 
 // ============================================================
+// Management Sheet (for "eating" or "cleaning" tables)
+// ============================================================
+function ManagementSheet({
+  table,
+  open,
+  onClose,
+  onUpdateStatus,
+}: {
+  table: Table | null;
+  open: boolean;
+  onClose: () => void;
+  onUpdateStatus: (tableId: string, status: TableStatus) => void;
+}) {
+  if (!table) return null;
+
+  const isEating = table.status === "eating";
+  const isCleaning = table.status === "cleaning";
+  const isReady = table.status === "ready_deliver";
+
+  const orderTotal = table.currentOrder.reduce(
+    (sum, item) => sum + getItemTotal(item),
+    0,
+  );
+
+  return (
+    <Sheet open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <SheetContent
+        side="right"
+        className="sm:max-w-md flex flex-col p-0 overflow-hidden"
+      >
+        <SheetHeader className="p-6 border-b">
+          <SheetTitle className="flex items-center gap-2 text-lg">
+            <div
+              className={cn(
+                "flex h-8 w-8 items-center justify-center rounded-lg",
+                isEating
+                  ? "bg-gray-500/10"
+                  : isCleaning
+                    ? "bg-amber-500/10"
+                    : "bg-blue-500/10",
+              )}
+            >
+              {isReady ? (
+                <Truck className="h-4 w-4 text-blue-500" />
+              ) : (
+                <Users
+                  className={cn(
+                    "h-4 w-4",
+                    isEating ? "text-gray-500" : "text-amber-500",
+                  )}
+                />
+              )}
+            </div>
+            Manajemen Meja {table.name}
+          </SheetTitle>
+          <SheetDescription>
+            {isEating
+              ? "Kelola status fisik meja setelah pelanggan selesai makan."
+              : isCleaning
+                ? "Konfirmasi jika meja sudah selesai dibersihkan."
+                : "Sajikan pesanan yang sudah siap dari dapur."}
+          </SheetDescription>
+        </SheetHeader>
+
+        <ScrollArea className="flex-1">
+          <div className="p-6 space-y-6">
+            <div
+              className={cn(
+                "rounded-xl border border-dashed border-border p-6 flex flex-col items-center justify-center text-center",
+                isEating
+                  ? "bg-gray-50/50"
+                  : isCleaning
+                    ? "bg-amber-50/50"
+                    : "bg-blue-50/50",
+              )}
+            >
+              <div
+                className={cn(
+                  "h-14 w-14 rounded-full flex items-center justify-center mb-3 shadow-sm",
+                  isEating
+                    ? "bg-gray-100 text-gray-500"
+                    : isCleaning
+                      ? "bg-amber-100 text-amber-500"
+                      : "bg-blue-100 text-blue-500",
+                )}
+              >
+                {isEating ? (
+                  <Users className="h-7 w-7" />
+                ) : isCleaning ? (
+                  <Sparkles className="h-7 w-7" />
+                ) : (
+                  <Truck className="h-7 w-7" />
+                )}
+              </div>
+              <h4 className="font-bold text-base mb-1">
+                Status: {STATUS_CONFIG[table.status].label}
+              </h4>
+              <p className="text-xs text-muted-foreground px-4">
+                {isEating
+                  ? "Pelanggan sedang berada di meja atau baru saja menyelesaikan pembayaran."
+                  : isCleaning
+                    ? "Meja sedang dalam proses pembersihan oleh kru."
+                    : "Makanan/minuman sudah siap disajikan ke meja pelanggan."}
+              </p>
+            </div>
+
+            {/* Order Preview for Ready status */}
+            {isReady && table.currentOrder.length > 0 && (
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider px-1">
+                  Daftar Pesanan ({table.currentOrder.length})
+                </h4>
+                <div className="rounded-xl border bg-card overflow-hidden">
+                  {table.currentOrder.map((item, idx) => (
+                    <div
+                      key={item.id + idx}
+                      className="flex gap-3 p-3 border-b last:border-0"
+                    >
+                      <span className="text-sm font-bold text-blue-600 dark:text-blue-400 shrink-0">
+                        {item.quantity}x
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium leading-tight truncate">
+                          {item.productName}
+                        </p>
+                        {item.selectedAddons.length > 0 && (
+                          <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">
+                            +{" "}
+                            {item.selectedAddons.map((a) => a.name).join(", ")}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  <div className="bg-muted/30 p-3 flex justify-between items-center">
+                    <span className="text-xs text-muted-foreground">
+                      Total Nilai
+                    </span>
+                    <span className="text-sm font-bold">
+                      {formatRp(orderTotal)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </ScrollArea>
+
+        <SheetFooter className="p-6 border-t bg-muted/5 flex-col gap-3">
+          {isEating && (
+            <Button
+              className="w-full bg-amber-500 hover:bg-amber-600 text-white gap-2 h-12 text-base font-semibold shadow-md shadow-amber-500/25"
+              onClick={() => onUpdateStatus(table.id, "cleaning")}
+            >
+              <Users className="h-5 w-5" />
+              Pelanggan Sudah Keluar
+            </Button>
+          )}
+          {isCleaning && (
+            <Button
+              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white gap-2 h-12 text-base font-semibold shadow-md shadow-emerald-500/25"
+              onClick={() => onUpdateStatus(table.id, "empty")}
+            >
+              <Sparkles className="h-5 w-5" />
+              Selesai Bersihkan Meja
+            </Button>
+          )}
+          {isReady && (
+            <Button
+              className="w-full bg-blue-500 hover:bg-blue-600 text-white gap-2 h-12 text-base font-semibold shadow-md shadow-blue-500/25 transition-all active:scale-95"
+              onClick={() => onUpdateStatus(table.id, "eating")}
+            >
+              <Check className="h-5 w-5" />
+              Sajikan Ke Meja
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            className="w-full h-10 text-muted-foreground"
+            onClick={onClose}
+          >
+            Batal
+          </Button>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+// ============================================================
 // POS Page
 // ============================================================
 export default function POSPage() {
@@ -361,9 +553,10 @@ export default function POSPage() {
   const addKDSOrder = useAppStore((s) => s.addKDSOrder);
   const markTableEmpty = useAppStore((s) => s.markTableEmpty);
 
-  // Validation sheet state
+  // Sheet states
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [validationSheetOpen, setValidationSheetOpen] = useState(false);
+  const [managementSheetOpen, setManagementSheetOpen] = useState(false);
 
   const statusCounts = tables.reduce(
     (acc, t) => {
@@ -394,10 +587,15 @@ export default function POSPage() {
     } else if (table.status === "new_order") {
       // Open waiter validation sheet
       setSelectedTable(table);
-      setSheetOpen(true);
-    } else if (table.status === "cleaning") {
-      // Waiter marks table as clean → empty
-      markTableEmpty(table.id);
+      setValidationSheetOpen(true);
+    } else if (
+      table.status === "eating" ||
+      table.status === "cleaning" ||
+      table.status === "ready_deliver"
+    ) {
+      // Open management sheet for eating/cleaning/ready manual transitions
+      setSelectedTable(table);
+      setManagementSheetOpen(true);
     } else {
       // For other statuses, navigate to menu to see table status/payment options
       const tableNumber = table.id.replace("table-", "");
@@ -423,7 +621,13 @@ export default function POSPage() {
     });
 
     // 3. Close the sheet
-    setSheetOpen(false);
+    setValidationSheetOpen(false);
+    setSelectedTable(null);
+  };
+
+  const handleUpdatePhysicalStatus = (tableId: string, status: TableStatus) => {
+    updateTableStatus(tableId, status);
+    setManagementSheetOpen(false);
     setSelectedTable(null);
   };
 
@@ -508,12 +712,23 @@ export default function POSPage() {
       {/* ---- Waiter Validation Sheet ---- */}
       <ValidationSheet
         table={selectedTable}
-        open={sheetOpen}
+        open={validationSheetOpen}
         onClose={() => {
-          setSheetOpen(false);
+          setValidationSheetOpen(false);
           setSelectedTable(null);
         }}
         onSendToKitchen={handleSendToKitchen}
+      />
+
+      {/* ---- Physical Management Sheet ---- */}
+      <ManagementSheet
+        table={selectedTable}
+        open={managementSheetOpen}
+        onClose={() => {
+          setManagementSheetOpen(false);
+          setSelectedTable(null);
+        }}
+        onUpdateStatus={handleUpdatePhysicalStatus}
       />
     </div>
   );
