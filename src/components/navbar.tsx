@@ -42,22 +42,16 @@ const navLinks = [
     description: "Kitchen queue",
   },
   {
-    href: "/checkout/1",
-    label: "Checkout",
-    icon: CreditCard,
-    description: "Payment screen",
-  },
-  {
-    href: "/transactions",
-    label: "Transaksi",
+    href: "/cashier",
+    label: "Kasir",
     icon: Receipt,
-    description: "Riwayat pembayaran",
+    description: "POS & Riwayat Transaksi",
   },
   {
-    href: "/admin/products",
+    href: "/admin",
     label: "Admin",
     icon: Settings,
-    description: "Kelola produk",
+    description: "Kelola produk & bahan baku",
   },
 ];
 
