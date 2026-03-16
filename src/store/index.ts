@@ -130,9 +130,7 @@ export const useAppStore = create<AppStore>((set) => ({
   clearTableOrder: (tableId) =>
     set((state) => ({
       tables: state.tables.map((t) =>
-        t.id === tableId
-          ? { ...t, currentOrder: [], status: "empty" as TableStatus }
-          : t,
+        t.id === tableId ? { ...t, currentOrder: [] } : t,
       ),
     })),
 
@@ -235,8 +233,7 @@ export const useAppStore = create<AppStore>((set) => ({
           return {
             ...t,
             currentOrder: nextOrder,
-            status:
-              forcedStatus || (unpaidItemsCount === 0 ? "cleaning" : t.status),
+            status: forcedStatus || t.status,
           } as typeof t;
         }),
       };
