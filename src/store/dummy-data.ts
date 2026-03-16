@@ -1,4 +1,30 @@
-import { Product, Table, KDSOrder, OrderItem, Transaction } from "@/types";
+import {
+  Product,
+  Table,
+  KDSOrder,
+  OrderItem,
+  Transaction,
+  RawMaterial,
+} from "@/types";
+
+// ============================================================
+// Dummy Raw Materials
+// ============================================================
+export const dummyRawMaterials: RawMaterial[] = [
+  { id: "rm-001", name: "Beras", stock: 50000, unit: "g" },
+  { id: "rm-002", name: "Bawang Putih", stock: 2000, unit: "g" },
+  { id: "rm-003", name: "Bawang Merah", stock: 2000, unit: "g" },
+  { id: "rm-004", name: "Telur", stock: 200, unit: "pcs" },
+  { id: "rm-005", name: "Mie Keriting", stock: 100, unit: "pcs" },
+  { id: "rm-006", name: "Daging Ayam", stock: 20000, unit: "g" },
+  { id: "rm-007", name: "Teh Celup", stock: 500, unit: "pcs" },
+  { id: "rm-008", name: "Gula Pasir", stock: 10000, unit: "g" },
+  { id: "rm-009", name: "Alpukat", stock: 5000, unit: "g" },
+  { id: "rm-010", name: "Biji Kopi", stock: 3000, unit: "g" },
+  { id: "rm-011", name: "Gula Aren", stock: 2000, unit: "g" },
+  { id: "rm-012", name: "Kentang", stock: 15000, unit: "g" },
+  { id: "rm-013", name: "Roti Tawar", stock: 50, unit: "pcs" },
+];
 
 // ============================================================
 // Dummy Products
@@ -16,6 +42,12 @@ export const dummyProducts: Product[] = [
       "Masukkan nasi putih, aduk rata.",
       "Tambahkan kecap manis, garam, dan merica. Aduk hingga merata.",
       "Sajikan dengan telur ceplok dan kerupuk.",
+    ],
+    recipeIngredients: [
+      { materialId: "rm-001", qtyNeeded: 200 },
+      { materialId: "rm-002", qtyNeeded: 10 },
+      { materialId: "rm-003", qtyNeeded: 10 },
+      { materialId: "rm-004", qtyNeeded: 1 },
     ],
     addons: {
       mandatory: [
@@ -40,6 +72,11 @@ export const dummyProducts: Product[] = [
       "Masukkan mie, tambahkan kecap manis dan saus tiram.",
       "Aduk rata di atas api besar selama 2 menit.",
     ],
+    recipeIngredients: [
+      { materialId: "rm-005", qtyNeeded: 1 },
+      { materialId: "rm-002", qtyNeeded: 10 },
+      { materialId: "rm-003", qtyNeeded: 10 },
+    ],
     addons: {
       mandatory: [],
       optional: [
@@ -60,6 +97,10 @@ export const dummyProducts: Product[] = [
       "Olesi berulang kali dengan sisa bumbu marinasi.",
       "Panggang selama 20-25 menit hingga matang sempurna.",
       "Sajikan dengan sambal dan lalapan.",
+    ],
+    recipeIngredients: [
+      { materialId: "rm-006", qtyNeeded: 300 },
+      { materialId: "rm-002", qtyNeeded: 15 },
     ],
     addons: {
       mandatory: [
@@ -83,6 +124,10 @@ export const dummyProducts: Product[] = [
       "Tambahkan gula pasir 2 sendok makan, aduk rata.",
       "Tuang ke gelas berisi es batu penuh.",
     ],
+    recipeIngredients: [
+      { materialId: "rm-007", qtyNeeded: 1 },
+      { materialId: "rm-008", qtyNeeded: 30 },
+    ],
     addons: {
       mandatory: [],
       optional: [
@@ -101,6 +146,10 @@ export const dummyProducts: Product[] = [
       "Ambil daging alpukat matang.",
       "Blender dengan susu cair, gula, dan es batu.",
       "Tuang ke gelas, tambahkan susu kental manis di atasnya.",
+    ],
+    recipeIngredients: [
+      { materialId: "rm-009", qtyNeeded: 200 },
+      { materialId: "rm-008", qtyNeeded: 20 },
     ],
     addons: {
       mandatory: [],
@@ -122,6 +171,10 @@ export const dummyProducts: Product[] = [
       "Tuang gula aren ke dasar gelas.",
       "Tambahkan es batu dan susu segar.",
       "Tuang espresso perlahan di atas susu.",
+    ],
+    recipeIngredients: [
+      { materialId: "rm-010", qtyNeeded: 18 },
+      { materialId: "rm-011", qtyNeeded: 25 },
     ],
     addons: {
       mandatory: [
@@ -146,6 +199,7 @@ export const dummyProducts: Product[] = [
       "Goreng dalam minyak panas 170°C selama 5-7 menit.",
       "Angkat, tiriskan, taburi garam dan bubuk paprika.",
     ],
+    recipeIngredients: [{ materialId: "rm-012", qtyNeeded: 250 }],
     addons: {
       mandatory: [],
       optional: [
@@ -166,6 +220,7 @@ export const dummyProducts: Product[] = [
       "Olesi coklat meses dan susu kental manis di satu sisi.",
       "Lipat dan panggang hingga kecokelatan.",
     ],
+    recipeIngredients: [{ materialId: "rm-013", qtyNeeded: 2 }],
     addons: {
       mandatory: [],
       optional: [
@@ -309,7 +364,16 @@ export const dummyTransactionHistory: Transaction[] = [
     id: "tx-001",
     tableId: "table-03",
     tableName: "Meja 3",
-    items: [sampleOrderItems[2]],
+    items: [
+      {
+        unitId: `${sampleOrderItems[2].id}-0`,
+        orderItemId: sampleOrderItems[2].id,
+        productId: sampleOrderItems[2].productId,
+        productName: sampleOrderItems[2].productName,
+        price: sampleOrderItems[2].price,
+        selectedAddons: sampleOrderItems[2].selectedAddons,
+      },
+    ],
     subtotal: 38000,
     tax: 3800,
     total: 41800,
@@ -322,7 +386,24 @@ export const dummyTransactionHistory: Transaction[] = [
     id: "tx-002",
     tableId: "table-06",
     tableName: "Meja 6",
-    items: [sampleOrderItems[0], sampleOrderItems[1]],
+    items: [
+      {
+        unitId: `${sampleOrderItems[0].id}-0`,
+        orderItemId: sampleOrderItems[0].id,
+        productId: sampleOrderItems[0].productId,
+        productName: sampleOrderItems[0].productName,
+        price: sampleOrderItems[0].price,
+        selectedAddons: sampleOrderItems[0].selectedAddons,
+      },
+      {
+        unitId: `${sampleOrderItems[1].id}-0`,
+        orderItemId: sampleOrderItems[1].id,
+        productId: sampleOrderItems[1].productId,
+        productName: sampleOrderItems[1].productName,
+        price: sampleOrderItems[1].price,
+        selectedAddons: sampleOrderItems[1].selectedAddons,
+      },
+    ],
     subtotal: 82000,
     tax: 8200,
     total: 90200,
@@ -333,7 +414,16 @@ export const dummyTransactionHistory: Transaction[] = [
     id: "tx-003",
     tableId: "table-01",
     tableName: "Meja 1",
-    items: [sampleOrderItems[1]],
+    items: [
+      {
+        unitId: `${sampleOrderItems[1].id}-0`,
+        orderItemId: sampleOrderItems[1].id,
+        productId: sampleOrderItems[1].productId,
+        productName: sampleOrderItems[1].productName,
+        price: sampleOrderItems[1].price,
+        selectedAddons: sampleOrderItems[1].selectedAddons,
+      },
+    ],
     subtotal: 16000,
     tax: 1600,
     total: 17600,
