@@ -8,6 +8,8 @@ import {
   MonitorDot,
   CreditCard,
   Menu,
+  Receipt,
+  Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,10 +42,16 @@ const navLinks = [
     description: "Kitchen queue",
   },
   {
-    href: "/checkout/1",
-    label: "Checkout",
-    icon: CreditCard,
-    description: "Payment screen",
+    href: "/cashier",
+    label: "Kasir",
+    icon: Receipt,
+    description: "POS & Riwayat Transaksi",
+  },
+  {
+    href: "/admin",
+    label: "Admin",
+    icon: Settings,
+    description: "Kelola produk & bahan baku",
   },
 ];
 

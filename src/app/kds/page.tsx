@@ -14,6 +14,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { TicketRecipeDialog } from "@/components/kds/ticket-recipe-dialog";
 import { useAppStore } from "@/store";
 import { KDSOrder, KDSStatus } from "@/types";
 import { cn } from "@/lib/utils";
@@ -128,10 +129,12 @@ function KDSTicket({
   order,
   onProcess,
   onDone,
+  onViewRecipe,
 }: {
   order: KDSOrder;
   onProcess: (orderId: string) => void;
   onDone: (orderId: string) => void;
+  onViewRecipe: (orderId: string) => void;
 }) {
   const elapsed = useElapsedTime(order.createdAt);
   const isUrgent = useIsUrgent(order.createdAt, order.status);
@@ -217,6 +220,16 @@ function KDSTicket({
           ))}
         </div>
 
+        {/* ---- Recipe Button ---- */}
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full text-violet-600 dark:text-violet-400 border-violet-500/30 hover:bg-violet-500/10 mb-3"
+          onClick={() => onViewRecipe(order.orderId)}
+        >
+          Lihat Kebutuhan Bahan (Resep)
+        </Button>
+
         {/* ---- Action Buttons ---- */}
         {order.status === "new" && (
           <Button
@@ -258,11 +271,13 @@ function KDSColumn({
   orders,
   onProcess,
   onDone,
+  onViewRecipe,
 }: {
   config: ColumnConfig;
   orders: KDSOrder[];
   onProcess: (orderId: string) => void;
   onDone: (orderId: string) => void;
+  onViewRecipe: (orderId: string) => void;
 }) {
   const Icon = config.icon;
 
@@ -305,6 +320,7 @@ function KDSColumn({
               order={order}
               onProcess={onProcess}
               onDone={onDone}
+              onViewRecipe={onViewRecipe}
             />
           ))
         )}
@@ -318,6 +334,8 @@ function KDSColumn({
 // ============================================================
 export default function KDSPage() {
   const [isMounted, setIsMounted] = useState(false);
+  const [selectedRecipeOrder, setSelectedRecipeOrder] =
+    useState<KDSOrder | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -363,6 +381,11 @@ export default function KDSPage() {
   const handleDone = (orderId: string) => {
     // CRITICAL: Mark KDS done + table -> ready_deliver
     markKDSDone(orderId);
+  };
+
+  const handleViewRecipe = (orderId: string) => {
+    const ticket = kdsQueue.find((o) => o.orderId === orderId);
+    if (ticket) setSelectedRecipeOrder(ticket);
   };
 
   const totalActive =
@@ -450,9 +473,16 @@ export default function KDSPage() {
             orders={ordersByStatus[col.status]}
             onProcess={handleProcess}
             onDone={handleDone}
+            onViewRecipe={handleViewRecipe}
           />
         ))}
       </div>
+
+      <TicketRecipeDialog
+        open={selectedRecipeOrder !== null}
+        onClose={() => setSelectedRecipeOrder(null)}
+        order={selectedRecipeOrder}
+      />
     </div>
   );
 }

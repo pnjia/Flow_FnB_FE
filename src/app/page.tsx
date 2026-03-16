@@ -6,6 +6,7 @@ import {
   UtensilsCrossed,
   MonitorDot,
   CreditCard,
+  Receipt,
   ArrowRight,
 } from "lucide-react";
 
@@ -38,12 +39,12 @@ const features = [
     shadow: "shadow-violet-500/20",
   },
   {
-    href: "/checkout/1",
-    icon: CreditCard,
-    title: "Checkout",
-    description: "Review order summary, apply discounts, and process payments.",
-    gradient: "from-sky-500 to-blue-500",
-    shadow: "shadow-sky-500/20",
+    href: "/cashier",
+    icon: Receipt,
+    title: "Cashier Dashboard",
+    description: "Manage checkout payments and view transaction history.",
+    gradient: "from-blue-500 to-cyan-500",
+    shadow: "shadow-blue-500/20",
   },
 ];
 
